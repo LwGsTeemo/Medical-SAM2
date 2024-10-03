@@ -1,13 +1,13 @@
 import os
 
-folder_path = '/home/youyu/Medical-SAM2/Training/images'
+folder_path = '/home/youyu/Medical-SAM2/image'
 
 for root, dirs, files in os.walk(folder_path):
-    for filename in files:
+    for filename in dirs:
         # 檢查文件名中是否包含 "PANCREASE"
-        if "slice" in filename:
+        if "PANCREAS" in filename:
             # 新文件名：將 "PANCREASE" 替換為 "img"
-            new_filename = filename.replace("slice_", "")
+            new_filename = filename.replace("PANCREAS_", "img")
             
             # 舊文件的完整路徑
             old_file_path = os.path.join(root, filename)

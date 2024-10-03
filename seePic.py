@@ -5,14 +5,14 @@ import os
 import glob
 
 # 讀取 .nii 文件
-nii_folder_path = '/home/youyu/Medical-SAM2/data/PANCREAS-CT/annotations'
+nii_folder_path = '/home/youyu/Medical-SAM2/data/PANCREAS-CT/images'
 
 # 使用 glob 列出所有 .nii 文件
 nii_files = glob.glob(os.path.join(nii_folder_path, '*.nii'))
 print(f'found {len(nii_files)} files.')
 
 # 創建一個總輸出資料夾
-output_folder = 'mask'
+output_folder = 'image'
 os.makedirs(output_folder, exist_ok=True)
 
 # 遍歷每個 .nii 檔案
@@ -34,18 +34,18 @@ for nii_file in nii_files:
     # 遍歷每一層 z 儲存為圖片
     idx = 0
     for i in range(0,img_data.shape[2],2):
-        # save as .npy files:
-        slice_data = img_data[:, :, i]  # 獲取每一層的資料
-        # 將這一層儲存為 .npy 文件
-        npy_file_path = os.path.join(file_output_folder, f'slice_{idx}.npy')
-        np.save(npy_file_path, slice_data)
-        idx += 1
-        # save as pictures:
-        # plt.imshow(img_data[:, :, i], cmap='gray')  # 繪製影像
-        # plt.axis('off')  # 隱藏座標軸
-        # plt.savefig(os.path.join(file_output_folder, f'slice_{idx}.png'), bbox_inches='tight', pad_inches=0)  # 儲存圖片
+        # # save as .npy files:
+        # slice_data = img_data[:, :, i]  # 獲取每一層的資料
+        # # 將這一層儲存為 .npy 文件
+        # npy_file_path = os.path.join(file_output_folder, f'slice_{idx}.npy')
+        # np.save(npy_file_path, slice_data)
         # idx += 1
-        # plt.close()
+        # save as pictures:
+        plt.imshow(img_data[:, :, i], cmap='gray')  # 繪製影像
+        plt.axis('off')  # 隱藏座標軸
+        plt.savefig(os.path.join(file_output_folder, f'slice_{idx}.jpg'), bbox_inches='tight', pad_inches=0)  # 儲存圖片
+        idx += 1
+        plt.close()
 
     print(f"Images saved for {file_name} in folder: {file_output_folder}")
 
