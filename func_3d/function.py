@@ -38,7 +38,7 @@ paper_loss = CombinedLoss(dice_weight=1 / 21, focal_weight=20 / 21)
 seed = torch.randint(1,11,(1,7))
 
 torch.backends.cudnn.benchmark = True
-scaler = torch.cuda.amp.GradScaler()
+# scaler = torch.cuda.amp.GradScaler()
 max_iterations = settings.EPOCH
 dice_val_best = 0.0
 global_step_best = 0
