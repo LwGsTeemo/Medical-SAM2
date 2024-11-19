@@ -1,6 +1,6 @@
 import os
 
-folder_path = '/home/Medical-SAM2/image'
+folder_path = '/home/Medical-SAM2/btcv_final/Training/image'
 
 for root, dirs, files in os.walk(folder_path):
     for filename in dirs:

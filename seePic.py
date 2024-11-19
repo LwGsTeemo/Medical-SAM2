@@ -160,8 +160,8 @@ def transferPic():
 
 
 if __name__ == '__main__':
-    # readNii(nii_folder_path)
+    readNii(nii_folder_path)
     # seeNpyPic(npy_folder_path)
     # rotatePicture(test_folder_path)
     # savePic()
-    transferPic()
+    # transferPic()

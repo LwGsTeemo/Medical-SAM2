@@ -30,8 +30,11 @@ class CombinedLoss(nn.Module):
         focal = self.focal_loss(inputs, targets)
         return self.dice_weight * dice + self.focal_weight * focal
 
+os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
+GPUdevice = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(GPUdevice) #是'cuda' 挖操
 
-GPUdevice = torch.device('cuda', args.gpu_device)
+# GPUdevice = torch.device('cuda', args.gpu_device)
 pos_weight = torch.ones([1]).cuda(device=GPUdevice)*2
 criterion_G = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 paper_loss = CombinedLoss(dice_weight=1 / 21, focal_weight=20 / 21)

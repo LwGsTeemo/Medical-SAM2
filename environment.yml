@@ -1,4 +1,4 @@
-name: medsam2
+name: Medsam2
 channels:
   - conda-forge
   - defaults
