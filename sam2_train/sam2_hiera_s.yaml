@@ -2,15 +2,15 @@
 
 # Model
 model:
-  _target_: Medical-SAM2.sam2_train.modeling.sam2_base.SAM2Base
+  _target_: sam2_train.modeling.sam2_base.SAM2Base
   image_encoder:
-    _target_: Medical-SAM2.sam2_train.modeling.backbones.image_encoder.ImageEncoder
+    _target_: sam2_train.modeling.backbones.image_encoder.ImageEncoder
     scalp: 1
     trunk:
-      _target_: ViT-CoMer.segmentation.mmseg_custom.models.backbones.wrapper.WrappedViTCoMer
+      _target_: sam2_train.modeling.backbones.vitcomer.WrappedViTCoMer
       vitcomer:
-        _target_: ViT-CoMer.segmentation.mmseg_custom.models.backbones.vit_comer.ViTCoMer  # ViTCoMer 的具體配置
-        pretrain_size: 224
+        _target_: sam2_train.modeling.backbones.vitcomer.ViTCoMer
+        img_size: 224
         num_heads: 12
         conv_inplane: 64
         n_points: 4
@@ -29,7 +29,8 @@ model:
         cnn_feature_interaction: true
         dim_ratio: 6.0
         embed_dim: 768
-      backbone_channel_list: [768, 768, 768, 768]  # 與 FPN 輸入對應
+        channel_list: [768, 768, 768, 768]
+          
     neck:
       _target_: sam2_train.modeling.backbones.image_encoder.FpnNeck
       position_encoding:

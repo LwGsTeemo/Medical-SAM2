@@ -9,7 +9,10 @@ from typing import List, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+# from .vitcomer import ViTCoMer
+# from external.ViTCoMer.segmentation.mmseg_custom.models.backbones.vit_comer import ViTCoMer
+# Medical-SAM2/external/ViTCoMer/segmentation/mmseg_custom/models/backbones/vit_comer.py
+# from .vitcomer import WrappedViTCoMer  # 或者導入 ViTCoMer
 
 class ImageEncoder(nn.Module):
     def __init__(

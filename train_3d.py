@@ -17,6 +17,8 @@ from func_3d import function
 from conf import settings
 from func_3d.utils import get_network, set_log_dir, create_logger
 from func_3d.dataset import get_dataloader
+from sam2_train.modeling.backbones import ImageEncoder, ViTCoMer
+
 
 def main():
 

@@ -1,3 +1,5 @@
+from .image_encoder import ImageEncoder
+from .vitcomer import ViTCoMer
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
