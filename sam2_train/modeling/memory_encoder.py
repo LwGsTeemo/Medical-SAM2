@@ -55,7 +55,7 @@ class MaskDownSampler(nn.Module):
         self.encoder.append(nn.Conv2d(mask_out_chans, embed_dim, kernel_size=1))
 
     def forward(self, x):
-        return self.encoder(x)
+        return self.encoder(x) 
 
 
 # Lightly adapted from ConvNext (https://github.com/facebookresearch/ConvNeXt)
