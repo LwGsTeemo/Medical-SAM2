@@ -35,11 +35,28 @@ class MaskDownSampler(nn.Module):
         super().__init__()
         num_layers = int(math.log2(total_stride) // math.log2(stride))
         assert stride**num_layers == total_stride
-        self.encoder = nn.Sequential()
         mask_in_chans, mask_out_chans = 1, 1
+        # self.encoder = nn.Sequential()
+        # for _ in range(num_layers):
+        #     mask_out_chans = mask_in_chans * (stride**2)
+        #     self.encoder.append(
+        #         nn.Conv2d(
+        #             mask_in_chans,
+        #             mask_out_chans,
+        #             kernel_size=kernel_size,
+        #             stride=stride,
+        #             padding=padding,
+        #         )
+        #     )
+        #     self.encoder.append(LayerNorm2d(mask_out_chans))
+        #     self.encoder.append(activation())
+        #     mask_in_chans = mask_out_chans
+
+        # self.encoder.append(nn.Conv2d(mask_out_chans, embed_dim, kernel_size=1))
+
+        layers = []
         for _ in range(num_layers):
-            mask_out_chans = mask_in_chans * (stride**2)
-            self.encoder.append(
+            layers.append(
                 nn.Conv2d(
                     mask_in_chans,
                     mask_out_chans,
@@ -48,11 +65,12 @@ class MaskDownSampler(nn.Module):
                     padding=padding,
                 )
             )
-            self.encoder.append(LayerNorm2d(mask_out_chans))
-            self.encoder.append(activation())
+            layers.append(LayerNorm2d(mask_out_chans))
+            layers.append(activation())
             mask_in_chans = mask_out_chans
 
-        self.encoder.append(nn.Conv2d(mask_out_chans, embed_dim, kernel_size=1))
+        layers.append(nn.Conv2d(mask_out_chans, embed_dim, kernel_size=1))
+        self.encoder = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.encoder(x) 
@@ -161,6 +179,9 @@ class MemoryEncoder(nn.Module):
         masks: torch.Tensor,
         skip_mask_sigmoid: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        print(f"pix_feat shape: {pix_feat.shape}")
+        print(f"masks shape before processing: {masks.shape}")
+
         ## Process masks
         # sigmoid, so that less domain shift from gt masks which are bool
         if not skip_mask_sigmoid:
@@ -170,12 +191,14 @@ class MemoryEncoder(nn.Module):
         ## Fuse pix_feats and downsampled masks
         # in case the visual features are on CPU, cast them to CUDA
         pix_feat = pix_feat.to(masks.device)
-
+        print(f"masks shape after downsampling: {masks.shape}")
+        print(f"pix_feat shape after projection: {pix_feat.shape}")
         x = self.pix_feat_proj(pix_feat)
         x = x + masks
         x = self.fuser(x)
         x = self.out_proj(x)
 
         pos = self.position_encoding(x).to(x.dtype)
-
+        print(f"Final vision features shape: {x.shape}")
+        print(f"Position encoding shape: {pos.shape}")
         return {"vision_features": x, "vision_pos_enc": [pos]}

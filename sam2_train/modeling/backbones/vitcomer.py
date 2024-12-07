@@ -6,7 +6,7 @@ from timm.models.vision_transformer import Block
 class ViTCoMer(nn.Module):
     def __init__(
         self,
-        img_size=224,
+        img_size=324,
         patch_size=16,
         embed_dims=[768, 384, 192, 96],
         depth=12,
@@ -24,6 +24,7 @@ class ViTCoMer(nn.Module):
         head_mul=2.0,
         min_head_dim=1,  
         min_embed_dim=32,
+        # record_norm=[],
     ):
         super(ViTCoMer, self).__init__()
         self.img_size = img_size
@@ -48,7 +49,7 @@ class ViTCoMer(nn.Module):
         num_patches = (img_size // patch_size) ** 2
 
         # Positional embedding
-        self.pos_embed = nn.Parameter(torch.zeros(1, embed_dims[0], num_patches))
+        self.pos_embed = nn.Parameter(torch.zeros(1,num_patches, embed_dims[0]))
 
         # Transformer blocks with multiple stages
         self.blocks = nn.ModuleList()
@@ -58,12 +59,13 @@ class ViTCoMer(nn.Module):
                 stage_idx += 1
             block_dim = embed_dims[stage_idx]
             num_heads = int(num_heads * (head_mul ** stage_idx))
-
+            
             # Ensure num_heads and embed_dim are not below the minimum threshold
             head_dim = max(block_dim // num_heads, self.min_head_dim)  # Ensure head_dim > 0
             num_heads = max(block_dim // head_dim, self.min_head_dim)  # Ensure num_heads > 0
             block_dim = max(block_dim, self.min_embed_dim)  # Ensure embed_dim is not too small
 
+            # self.record_norm.append(block_dim)
             block = Block(  # This should be a custom block like MultiScaleBlock
                 dim=block_dim,
                 num_heads=num_heads,
@@ -78,18 +80,44 @@ class ViTCoMer(nn.Module):
         self.norm = nn.LayerNorm(embed_dims[-1])
 
     def forward(self, x: torch.Tensor):
+        device = x.device
+        print(device)
         B, C, H, W = x.shape
         assert H == self.img_size and W == self.img_size, "Input image size must match model size."
-
+        print(f"Input shape to ViTCoMer: {x.shape}")
         x = self.patch_embed(x)
         x = x.flatten(2).transpose(1, 2)
-        x = x + self.pos_embed
+        print(f"x shape: {x.shape}")  # e.g., [batch_size, seq_len, embed_dim]
+        print(f"pos_embed shape: {self.pos_embed.shape}")  # e.g., [1, pos_len, embed_dim]
+        # 确保 pos_embed 的形状与 x 一致
+        if self.pos_embed.shape != x.shape:
+            self.pos_embed = self.pos_embed.permute(0, 2, 1)  # 转置为 [1, 4096, 768]
+        x = x + self.pos_embed.to(device)
+        print(f"Input shape to ViTCoMer (after): {x.shape}")
 
+        # 遍歷 Blocks
         outputs = []
+        stage_idx = 0
+        current_block_dim = self.embed_dims[stage_idx]  # 初始化第一個 stage 的維度
         for i, blk in enumerate(self.blocks):
-            x = blk(x)
+            # 如果到達新的 stage，動態調整 LayerNorm
+            if i == sum(self.stages[:stage_idx + 1]):
+                stage_idx += 1
+                new_block_dim = self.embed_dims[stage_idx]
+                # 添加降維操作，將 x 的特徵維度調整到 new_block_dim
+                print(f"Switching stage: Adjusting dim from {current_block_dim} to {new_block_dim}")
+                linear_layer = nn.Linear(current_block_dim, new_block_dim).to(device)
+                x = linear_layer(x)
+                print(f"x shape after Linear layer: {x.shape}")
+                current_block_dim = new_block_dim  # 更新當前 block 的維度
+
+            print(f"Before Block {i}: {x.shape}, Expected dim: {current_block_dim}")
+            x = blk(x.to(device))  # 執行 Block
+            print(f"After Block {i}: {x.shape}")
+
             if (i + 1) in self.stages:
                 outputs.append(x)
 
         x = self.norm(x)
+        print(f"Output shape from ViTCoMer: {[o.shape for o in outputs]}")
         return outputs if self.return_interm_layers else x

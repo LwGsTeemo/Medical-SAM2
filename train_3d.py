@@ -27,6 +27,15 @@ def main():
     GPUdevice = torch.device('cuda', args.gpu_device)
 
     net = get_network(args, args.net, use_gpu=args.gpu, gpu_device=GPUdevice, distribution = args.distributed)
+    # 打印模型的 state_dict keys
+    # print("Model state_dict keys:")
+    # print(net.state_dict().keys())
+    print("================================================")
+    # 打印預訓練權重的 state_dict keys
+    # weights = torch.load(args.pretrain)
+    # print("Pretrained state_dict keys:")
+    # print(weights.keys())
+    # print("================================================")
     net.to(dtype=torch.bfloat16)
     if args.pretrain:
         print(args.pretrain)

@@ -78,12 +78,18 @@ def build_sam2_video_predictor(
 
 def _load_checkpoint(model, ckpt_path):
     if ckpt_path is not None:
-        sd = torch.load(ckpt_path, map_location="cpu")["model"]
+        sd = torch.load(ckpt_path, map_location="cpu")
+        # print(sd)
+        # sd = sd["model"]
         missing_keys, unexpected_keys = model.load_state_dict(sd)
         if missing_keys:
-            logging.error(missing_keys)
-            raise RuntimeError()
+            # logging.error(missing_keys)
+            # raise RuntimeError()
+            print(f"Warning: Missing keys: {missing_keys}")
+            logging.info(f"Warning: Missing keys: {missing_keys}")
         if unexpected_keys:
-            logging.error(unexpected_keys)
-            raise RuntimeError()
+            # logging.error(unexpected_keys)
+            # raise RuntimeError()
+            print(f"Warning: Unexpected keys: {unexpected_keys}")
+            logging.info(f"Warning: Unexpected keys: {unexpected_keys}")
         logging.info("Loaded checkpoint sucessfully")

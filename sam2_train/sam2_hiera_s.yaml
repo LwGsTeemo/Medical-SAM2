@@ -8,7 +8,7 @@ model:
     scalp: 1
     trunk:
       _target_: sam2_train.modeling.backbones.vitcomer.ViTCoMer
-      img_size: 1024
+      img_size: 324
       patch_size: 16
       embed_dims: [768, 384, 192, 96]
       depth: 12
