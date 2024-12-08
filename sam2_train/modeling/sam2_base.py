@@ -97,6 +97,8 @@ class SAM2Base(torch.nn.Module):
 
         # Part 1: the image backbone
         self.image_encoder = image_encoder
+        self.conv_layer = nn.Conv2d(in_channels=4, out_channels=256, kernel_size=1)  # 改變通道數為256
+
         # Use level 0, 1, 2 for high-res setting, or just level 2 for the default setting
         self.use_high_res_features_in_sam = use_high_res_features_in_sam
         self.num_feature_levels = 3 if use_high_res_features_in_sam else 1
@@ -298,7 +300,10 @@ class SAM2Base(torch.nn.Module):
         """
         B = backbone_features.size(0)
         device = backbone_features.device
-        assert backbone_features.size(1) == self.sam_prompt_embed_dim
+        print(backbone_features.shape)
+        print(self.sam_prompt_embed_dim)
+        assert backbone_features.size(3) == self.sam_prompt_embed_dim
+        print(self.sam_image_embedding_size)
         assert backbone_features.size(2) == self.sam_image_embedding_size
         assert backbone_features.size(3) == self.sam_image_embedding_size
 
@@ -467,16 +472,17 @@ class SAM2Base(torch.nn.Module):
         if self.use_high_res_features_in_sam:
             # precompute projected level 0 and level 1 features in SAM decoder
             # to avoid running it again on every SAM click
-            adaptor = nn.Conv2d(in_channels=400, out_channels=256, kernel_size=1).to('cuda:0')
-            backbone_out["backbone_fpn"][0] = adaptor(backbone_out["backbone_fpn"][0])
+            # adaptor = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=1).to('cuda:0')
+
+            # backbone_out["backbone_fpn"][0] = adaptor(backbone_out["backbone_fpn"][0])
             print(f"Shape of backbone_fpn[0]: {backbone_out['backbone_fpn'][0].shape}")
 
             backbone_out["backbone_fpn"][0] = self.sam_mask_decoder.conv_s0(
                 backbone_out["backbone_fpn"][0]
             )
 
-            adaptor_1 = nn.Conv2d(in_channels=400, out_channels=256, kernel_size=1).to('cuda:0')
-            backbone_out["backbone_fpn"][1] = adaptor_1(backbone_out["backbone_fpn"][1])
+            # adaptor_1 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=1).to('cuda:0')
+            # backbone_out["backbone_fpn"][1] = adaptor_1(backbone_out["backbone_fpn"][1])
             print(f"Shape of backbone_fpn[1]: {backbone_out['backbone_fpn'][1].shape}")
 
             backbone_out["backbone_fpn"][1] = self.sam_mask_decoder.conv_s1(
@@ -645,12 +651,48 @@ class SAM2Base(torch.nn.Module):
                 else:
                     num_obj_ptr_tokens = 0
         else:
-            # for initial conditioning frames, encode them without using any previous memory
             if self.directly_add_no_mem_embed:
                 # directly add no-mem embedding (instead of using the transformer encoder)
-                pix_feat_with_mem = current_vision_feats[-1] + self.no_mem_embed
+                print(f'current_vision_feats[-1].shape :{current_vision_feats[-1].shape}') # [4,400,256]
+                print(f'self.no_mem_embed.shape :{self.no_mem_embed.shape}') # [1,1,256]
+                # adjusted_feats = self.conv_layer(current_vision_feats[-1])  # 調整通道數4->256 [256,400,400]
+                # if adjusted_feats.ndim == 3:  # 检查是否缺少 batch 维度
+                #     adjusted_feats = adjusted_feats.unsqueeze(0)  # 增加 batch 维度，形状变为 [1, 256, 400, 400]
+                #     adaptive_pool = nn.AdaptiveAvgPool2d(1)  # 输出为 (1, 1)
+                #     adjusted_feats = adaptive_pool(adjusted_feats)  # 新的形状是 [B, 256, 1, 1]
+                #     adjusted_feats = adjusted_feats.squeeze(0)
+                # print(f'after_vision_feats[-1].shape :{adjusted_feats.shape}')
+                transformed_no_mem_embed = self.no_mem_embed.expand(4, 400, 256)
+                # transformed_no_mem_embed = transformed_no_mem_embed.to(adjusted_feats.dtype)
+                print(f'after_self.no_mem_embed.shape :{transformed_no_mem_embed.shape}') # [4,400,256]
+
+                pix_feat_with_mem = current_vision_feats[-1] + transformed_no_mem_embed
+                # pix_feat_with_mem = pix_feat_with_mem.unsqueeze(0)  # 形狀變為 [1, 256, 1, 1]
+                # pix_feat_with_mem = F.interpolate(pix_feat_with_mem, size=(2, 2), mode='bilinear', align_corners=False)
+                # pix_feat_with_mem = pix_feat_with_mem.view(1, 256, 2, 2)  # 這樣會有 1024 個元素
+                # pix_feat_with_mem = pix_feat_with_mem.squeeze(0)
+                print(f'pix_feat_with_mem.shape : {pix_feat_with_mem.shape}')
                 pix_feat_with_mem = pix_feat_with_mem.permute(1, 2, 0).view(B, C, H, W)
+                pix_feat_with_mem = pix_feat_with_mem.permute(3, 2, 0, 1)
+                print(f'final_pix_feat_with_mem.shape : {pix_feat_with_mem.shape}')
+
                 return pix_feat_with_mem
+            # for initial conditioning frames, encode them without using any previous memory
+            # if self.directly_add_no_mem_embed:
+            #     print(f'current_vision_feats[-1].shape :{current_vision_feats[-1].shape}')
+            #     adjusted_feats = self.conv_layer(current_vision_feats[-1])  # 調整通道數
+            #     # if self.no_mem_embed.shape[1] != adjusted_feats.shape[1]:
+            #     #     no_mem_embed_expanded = self.no_mem_embed.expand(1, 1, 256)
+            #     # else:
+            #     #     no_mem_embed_expanded = self.no_mem_embed
+            #     print(adjusted_feats.shape)
+            #     # print(no_mem_embed_expanded.shape)
+            #     # if adjusted_feats.shape != no_mem_embed_expanded.shape:
+            #         # adaptive_pool = nn.AdaptiveAvgPool2d(1)  # 输出为 (1, 1)
+            #         # adjusted_feats = adaptive_pool(adjusted_feats)  # 新的形状是 [B, 256, 1, 1]
+            #     pix_feat_with_mem = adjusted_feats + self.no_mem_embed_expanded
+            #     pix_feat_with_mem = pix_feat_with_mem.permute(1, 2, 0).view(B, C, H, W)
+            #     return pix_feat_with_mem
 
             # Use a dummy token on the first frame (to avoid emtpy memory input to tranformer encoder)
             to_cat_memory = [self.no_mem_embed.expand(1, B, self.mem_dim)]
