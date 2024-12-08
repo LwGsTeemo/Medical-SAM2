@@ -81,7 +81,7 @@ def _load_checkpoint(model, ckpt_path):
         sd = torch.load(ckpt_path, map_location="cpu")
         # print(sd)
         # sd = sd["model"]
-        missing_keys, unexpected_keys = model.load_state_dict(sd)
+        missing_keys, unexpected_keys = model.load_state_dict(sd,strict=False)
         if missing_keys:
             # logging.error(missing_keys)
             # raise RuntimeError()

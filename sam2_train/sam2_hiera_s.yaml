@@ -23,7 +23,7 @@ model:
         normalize: true
         scale: null
         temperature: 10000
-      d_model: 256
+      d_model: 400
       backbone_channel_list: [768, 384, 192, 96]
       fpn_top_down_levels: [2, 3]  # output level 0 and 1 directly use the backbone features
       fpn_interp_model: nearest
@@ -87,7 +87,7 @@ model:
         num_layers: 2
 
   num_maskmem: 7
-  image_size: 1024
+  image_size: 324
   # apply scaled sigmoid on mask logits for memory encoder, and directly feed input mask as output mask
   sigmoid_scale_for_mem_enc: 20.0
   sigmoid_bias_for_mem_enc: -10.0

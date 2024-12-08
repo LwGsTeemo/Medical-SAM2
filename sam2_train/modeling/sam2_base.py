@@ -6,6 +6,7 @@
 
 import torch
 import torch.distributed
+import torch.nn as nn
 import torch.nn.functional as F
 
 from torch.nn.init import trunc_normal_
@@ -466,9 +467,18 @@ class SAM2Base(torch.nn.Module):
         if self.use_high_res_features_in_sam:
             # precompute projected level 0 and level 1 features in SAM decoder
             # to avoid running it again on every SAM click
+            adaptor = nn.Conv2d(in_channels=400, out_channels=256, kernel_size=1).to('cuda:0')
+            backbone_out["backbone_fpn"][0] = adaptor(backbone_out["backbone_fpn"][0])
+            print(f"Shape of backbone_fpn[0]: {backbone_out['backbone_fpn'][0].shape}")
+
             backbone_out["backbone_fpn"][0] = self.sam_mask_decoder.conv_s0(
                 backbone_out["backbone_fpn"][0]
             )
+
+            adaptor_1 = nn.Conv2d(in_channels=400, out_channels=256, kernel_size=1).to('cuda:0')
+            backbone_out["backbone_fpn"][1] = adaptor_1(backbone_out["backbone_fpn"][1])
+            print(f"Shape of backbone_fpn[1]: {backbone_out['backbone_fpn'][1].shape}")
+
             backbone_out["backbone_fpn"][1] = self.sam_mask_decoder.conv_s1(
                 backbone_out["backbone_fpn"][1]
             )

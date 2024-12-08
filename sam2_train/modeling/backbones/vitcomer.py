@@ -17,7 +17,7 @@ class ViTCoMer(nn.Module):
         attn_drop_rate=0.0,
         drop_path_rate=0.0,
         return_interm_layers=False,
-        stages=[2, 3, 16, 3],  
+        stages=[1, 2, 4, 8],  
         global_att_blocks=[12, 16], 
         window_spec=[8, 4, 14, 7],
         dim_mul=2.0,
@@ -105,13 +105,14 @@ class ViTCoMer(nn.Module):
                 stage_idx += 1
                 new_block_dim = self.embed_dims[stage_idx]
                 # 添加降維操作，將 x 的特徵維度調整到 new_block_dim
-                print(f"Switching stage: Adjusting dim from {current_block_dim} to {new_block_dim}")
+                # print(f"Switching stage: Adjusting dim from {current_block_dim} to {new_block_dim}")
                 linear_layer = nn.Linear(current_block_dim, new_block_dim).to(device)
                 x = linear_layer(x)
-                print(f"x shape after Linear layer: {x.shape}")
+                # print(f"x shape after Linear layer: {x.shape}")
                 current_block_dim = new_block_dim  # 更新當前 block 的維度
+                self.norm = nn.LayerNorm(new_block_dim).to(device)  # 更新 LayerNorm
 
-            print(f"Before Block {i}: {x.shape}, Expected dim: {current_block_dim}")
+            # print(f"Before Block {i}: {x.shape}, Expected dim: {current_block_dim}")
             x = blk(x.to(device))  # 執行 Block
             print(f"After Block {i}: {x.shape}")
 

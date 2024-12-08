@@ -31,7 +31,18 @@ class ImageEncoder(nn.Module):
 
     def forward(self, sample: torch.Tensor):
         # Forward through backbone
-        features, pos = self.neck(self.trunk(sample))
+        xs = self.trunk(sample)  # trunk 的輸出是 list
+        print(f"Trunk output type: {type(xs)}, length: {len(xs)}")
+        # 確保每個特徵圖的通道數正確
+        adjusted_xs = []
+        for i, x in enumerate(xs):
+            # print(f"Feature {i} shape before adjustment: {x.shape}")
+            x = x.permute(0, 2, 1).unsqueeze(1)  # 調整為 [1, 1, 768, 400]
+            print(f"Feature {i} shape after adjustment: {x.shape}")
+            adjusted_xs.append(x)
+        print(f"Adjusted trunk output shapes: {[x.shape for x in adjusted_xs]}")
+
+        features, pos = self.neck(adjusted_xs)
         if self.scalp > 0:
             # Discard the lowest resolution features
             features, pos = features[: -self.scalp], pos[: -self.scalp]
@@ -105,15 +116,35 @@ class FpnNeck(nn.Module):
 
         out = [None] * len(self.convs)
         pos = [None] * len(self.convs)
+        # print(f"len(xs): {len(xs)}, len(self.convs): {len(self.convs)}")
+        # print(f"xs: {xs}")  # 打印 xs 的具體內容
+        # print(f"self.convs: {self.convs}")  # 打印 conv 層
+        # print(f"len(xs): {len(xs)}, len(self.convs): {len(self.convs)}")  # 打印它們的長度
+
         assert len(xs) == len(self.convs)
         # fpn forward pass
         # see https://github.com/facebookresearch/detectron2/blob/main/detectron2/modeling/backbone/fpn.py
         prev_features = None
         # forward in top-down order (from low to high resolution)
         n = len(self.convs) - 1
+
+        xs = xs[::-1]  # 這將顛倒列表順序
+
         for i in range(n, -1, -1):
             x = xs[i]
+            print(f'before : {x.shape}')
+            x = x.permute(3,2,1,0)
+            # # 動態調整通道數
+            # in_channels = x.shape[1]  # 輸入通道數
+            # out_channels = 768  # 輸出通道數
+            # if in_channels != out_channels:
+            #     conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1).to('cuda:0')
+            #     conv.bias.data = conv.bias.data.to('cuda:0').to(torch.bfloat16)
+            #     x = conv(x)  # 進行卷積
+            # x = x.permute(3, 1, 2, 0)
+            print(f'after : {x.shape}')
             lateral_features = self.convs[n - i](x)
+            print(f'shape : {lateral_features.shape}')
             if i in self.fpn_top_down_levels and prev_features is not None:
                 top_down_features = F.interpolate(
                     prev_features.to(dtype=torch.float32),

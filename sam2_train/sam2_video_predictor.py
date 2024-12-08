@@ -1287,13 +1287,17 @@ class SAM2VideoPredictor(SAM2Base):
             "backbone_fpn": backbone_out["backbone_fpn"].copy(),
             "vision_pos_enc": backbone_out["vision_pos_enc"].copy(),
         }
+         # Expand backbone features
         for i, feat in enumerate(expanded_backbone_out["backbone_fpn"]):
-            expanded_backbone_out["backbone_fpn"][i] = feat.expand(
-                batch_size, -1, -1, -1
-            )
+            if len(feat.shape) == 3:  # Check if it is missing the batch dimension
+                feat = feat.unsqueeze(0)  # Add batch dimension (shape becomes [1, 32, 1, 1])
+            expanded_backbone_out["backbone_fpn"][i] = feat.repeat(batch_size, 1, 1, 1)  # Repeat to batch_size
+
+        # Expand positional encodings
         for i, pos in enumerate(expanded_backbone_out["vision_pos_enc"]):
-            pos = pos.expand(batch_size, -1, -1, -1)
-            expanded_backbone_out["vision_pos_enc"][i] = pos
+            if len(pos.shape) == 3:  # Check if it is missing the batch dimension
+                pos = pos.unsqueeze(0)  # Add batch dimension (shape becomes [1, 400, 256, 1])
+            expanded_backbone_out["vision_pos_enc"][i] = pos.repeat(batch_size, 1, 1, 1)  # Repeat to batch_size
 
         features = self._prepare_backbone_features(expanded_backbone_out)
         features = (expanded_image,) + features
